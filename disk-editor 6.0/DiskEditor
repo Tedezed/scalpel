@@ -1,0 +1,37 @@
+#!/bin/bash
+_ARCH=$(uname -i)
+DIR="$( cd "$( dirname "$0" )" && pwd )"
+_BINARY="bin/$( basename "$0" )"
+_LD="LD_LIBRARY_PATH=$DIR/lib"
+if [ $_ARCH = "x86_64" ]; then
+    _BINARY+="64"
+    _LD+="/64/"
+    _QP="$DIR/lib/64/plugins/:$QT_PLUGIN_PATH"
+else
+    _LD+="/32/"
+    _QP="$DIR/lib/32/plugins/:$QT_PLUGIN_PATH"
+fi
+if [ -z $XAUTHORITY ]; then
+    _XA="$HOME/.Xauthority"
+else
+    _XA="$XAUTHORITY"
+fi
+#create qt.conf
+echo "[Paths]" > "$DIR/bin/qt.conf"
+echo "Prefix = $DIR" >> "$DIR/bin/qt.conf"
+_COMMAND_N=0
+[ "$_COMMAND_N" = "0" ] && hash pkexec 2> /dev/null && _COMMAND_N=1
+[ "$_COMMAND_N" = "0" ] && hash kdesu 2> /dev/null && _COMMAND_N=2
+[ "$_COMMAND_N" = "0" ] && hash gksu 2> /dev/null && _COMMAND_N=3
+[ "$_COMMAND_N" = "0" ] && hash gksudo 2> /dev/null && _COMMAND_N=4
+#[ "$_COMMAND_N" = "0" ] && hash xdg-su 2> /dev/null && _COMMAND_N=5
+case "$_COMMAND_N" in
+    "0") _COMMAND='';;
+    "1") _COMMAND="pkexec env USER=$USER KDE_FULL_SESSION=$KDE_FULL_SESSION KDE_SESSION_VERSION=$KDE_SESSION_VERSION DISPLAY=$DISPLAY XAUTHORITY=$_XA XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP XDG_SESSION_ID=$XDG_SESSION_ID QT_SYSTEM_DIR=$QT_SYSTEM_DIR";;
+    "2") _COMMAND="kdesu -td";;
+    "3") _COMMAND='gksu';;  
+    "4") _COMMAND='gksudo';;
+#    "5") _COMMAND='xdg-su -c';;
+esac
+$_COMMAND "$_LD" "QT_PLUGIN_PATH=$_QP" "$DIR/$_BINARY" "$@"
+exit 0
